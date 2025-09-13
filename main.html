@@ -1,0 +1,302 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Cracked Players — Tier List</title>
+  <style>
+    :root{
+      --bg:#0f1724;
+      --card:#0b1220;
+      --accent:#7c3aed;
+      --muted:#9aa4b2;
+      --glass: rgba(255,255,255,0.03);
+      --danger:#ef4444;
+    }
+    *{box-sizing:border-box}
+    body{
+      margin:0;
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+      background: var(--bg);
+      color:#e6eef8;
+      min-height:100vh;
+      padding:28px;
+      display:flex;
+      align-items:flex-start;
+      justify-content:center;
+    }
+
+    .container{
+      width:100%;
+      max-width:800px;
+      background: var(--card);
+      border-radius:14px;
+      box-shadow:0 8px 30px rgba(3,7,18,0.6);
+      padding:22px;
+      border:1px solid rgba(255,255,255,0.05);
+    }
+
+    .top-center{
+      display:flex;
+      justify-content:center;
+      margin:18px 0 20px 0;
+    }
+
+    .btn{
+      background:linear-gradient(180deg,var(--accent),#5b21b6);
+      border:none;color:white;padding:10px 16px;border-radius:10px;cursor:pointer;font-weight:600;
+    }
+
+    .players-list{display:flex;flex-direction:column;gap:10px}
+
+    .player{
+      display:flex;align-items:center;gap:12px;padding:10px;border-radius:10px;background:var(--glass);
+    }
+    .avatar{
+      width:60px;height:60px;border-radius:6px;background:#6b7280;display:flex;align-items:center;justify-content:center;font-weight:700;color:#111;overflow:hidden;
+    }
+    .avatar img{width:100%;height:100%;object-fit:cover;display:block}
+
+    .meta{flex:1;min-width:0}
+    .meta .name{font-weight:700}
+    .meta .sub{font-size:12px;color:var(--muted);margin-top:3px}
+    .meta .desc{font-size:12px;color:#cbd5e1;margin-top:3px}
+    .rank{font-weight:800;padding:8px 12px;border-radius:6px;background:var(--glass);min-width:74px;text-align:center}
+
+    .actions{display:flex;gap:6px;margin-left:10px;font-size:20px;cursor:pointer}
+
+    .modal-backdrop{
+      position:fixed;inset:0;background:rgba(2,6,23,0.6);display:none;align-items:center;justify-content:center;padding:20px;z-index:60
+    }
+    .modal{
+      width:100%;max-width:500px;background:#081426;padding:18px;border-radius:12px;border:1px solid rgba(255,255,255,0.04);
+    }
+    label{display:block;font-size:13px;margin-bottom:6px}
+    input[type=text], select, textarea{
+      width:100%;padding:10px;border-radius:8px;border:1px solid rgba(255,255,255,0.04);background:transparent;color:inherit
+    }
+    textarea{min-height:60px;resize:vertical}
+
+    .controls{display:flex;gap:8px;justify-content:flex-end;margin-top:12px}
+    .ghost{background:transparent;border:1px solid rgba(255,255,255,0.06);padding:10px 12px;border-radius:8px;color:var(--muted);cursor:pointer}
+
+    .error{color:var(--danger);font-weight:700;margin-top:8px;font-size:13px}
+    .no-players{color:var(--muted);padding:20px;text-align:center}
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="top-center">
+      <button id="openAddBtn" class="btn">➕ Add New Player</button>
+    </div>
+
+    <div id="playersWrap" class="players-list">
+      <div class="no-players">No players yet.</div>
+    </div>
+  </div>
+
+  <div id="modal" class="modal-backdrop">
+    <div class="modal">
+      <h3 id="modalTitle" style="margin-top:0">Add New Player</h3>
+      <div id="authBlock">
+        <label>Password</label>
+        <input id="pwInput" type="text" placeholder="Password">
+        <div class="controls">
+          <button id="checkBtn" class="btn">Enter</button>
+          <button id="closeAuth" class="ghost">Cancel</button>
+        </div>
+        <div id="authError" class="error" style="display:none"></div>
+      </div>
+
+      <form id="playerForm" style="display:none">
+        <div>
+          <label>Name</label>
+          <input id="nameInput" type="text" placeholder="Player name" required>
+        </div>
+
+        <div>
+          <label>Rank (type any number)</label>
+          <input id="rankInput" type="text" placeholder="Rank number" required>
+        </div>
+
+        <div>
+          <label>Tier</label>
+          <select id="tierSelect">
+            <option value="">-- choose tier --</option>
+            <option>LT1</option>
+            <option>LT2</option>
+            <option>LT3</option>
+            <option>LT4</option>
+            <option>LT5</option>
+            <option>High Tier 1</option>
+            <option>High Tier 2</option>
+            <option>High Tier 3</option>
+            <option>High Tier 4</option>
+            <option>High Tier 5</option>
+          </select>
+        </div>
+
+        <div>
+          <label>Description (optional)</label>
+          <textarea id="descInput" placeholder="Description"></textarea>
+        </div>
+
+        <div>
+          <label>Head skin image URL (optional)</label>
+          <input id="skinInput" type="text" placeholder="Image URL">
+        </div>
+
+        <div id="formError" class="error" style="display:none"></div>
+
+        <div class="controls">
+          <button type="submit" class="btn">Save</button>
+          <button id="cancelForm" type="button" class="ghost">Cancel</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script>
+    const STORAGE_KEY = 'tirelist_players_v3';
+    const PASSWORD = 'abdu123';
+
+    const openAddBtn = document.getElementById('openAddBtn');
+    const modal = document.getElementById('modal');
+    const authBlock = document.getElementById('authBlock');
+    const playerForm = document.getElementById('playerForm');
+    const pwInput = document.getElementById('pwInput');
+    const checkBtn = document.getElementById('checkBtn');
+    const authError = document.getElementById('authError');
+    const closeAuth = document.getElementById('closeAuth');
+    const rankInput = document.getElementById('rankInput');
+    const tierSelect = document.getElementById('tierSelect');
+    const skinInput = document.getElementById('skinInput');
+    const nameInput = document.getElementById('nameInput');
+    const descInput = document.getElementById('descInput');
+    const formError = document.getElementById('formError');
+    const cancelForm = document.getElementById('cancelForm');
+    const playersWrap = document.getElementById('playersWrap');
+    const modalTitle = document.getElementById('modalTitle');
+
+    let editingIndex = null;
+
+    function openModal(){ modal.style.display='flex'; authBlock.style.display='block'; playerForm.style.display='none'; pwInput.value=''; authError.style.display='none'; }
+    function closeModal(){ modal.style.display='none'; editingIndex=null; }
+
+    openAddBtn.addEventListener('click', ()=>{ openModal(); modalTitle.textContent="Add New Player"; });
+    closeAuth.addEventListener('click', closeModal);
+    cancelForm.addEventListener('click', closeModal);
+
+    function loadPlayers(){
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if (!raw) return [];
+      try{ return JSON.parse(raw)||[] }catch(e){return[]}
+    }
+    function savePlayers(list){ localStorage.setItem(STORAGE_KEY, JSON.stringify(list)); }
+
+    function renderPlayers(){
+      const list = loadPlayers();
+      if (!list.length){ playersWrap.innerHTML = '<div class="no-players">No players yet.</div>'; return; }
+      list.sort((a,b)=> Number(a.rank)-Number(b.rank));
+      playersWrap.innerHTML = '';
+      list.forEach((p,i)=>{
+        const el = document.createElement('div'); el.className='player';
+        const avatar = document.createElement('div'); avatar.className='avatar';
+        if (p.skin){
+          const img = document.createElement('img'); img.src = p.skin;
+          img.onerror = ()=>{ avatar.textContent = (p.name||'')[0] || '?'; avatar.style.background = '#9ca3af'; };
+          avatar.appendChild(img);
+        } else {
+          avatar.textContent = (p.name||'')[0] ? (p.name||'')[0].toUpperCase() : '?';
+          avatar.style.background = '#9ca3af';
+        }
+
+        const meta = document.createElement('div'); meta.className='meta';
+        const name = document.createElement('div'); name.className='name'; name.textContent = p.name || 'Unknown';
+        const sub = document.createElement('div'); sub.className='sub'; sub.textContent = p.tier || '';
+        const desc = document.createElement('div'); desc.className='desc'; desc.textContent = p.desc || '';
+        meta.appendChild(name); meta.appendChild(sub); meta.appendChild(desc);
+
+        const rank = document.createElement('div'); rank.className='rank'; rank.textContent = '#' + p.rank;
+
+        const actions = document.createElement('div'); actions.className='actions';
+        const editBtn = document.createElement('span'); editBtn.textContent='✏️'; 
+        editBtn.onclick=()=>authPrompt(()=>startEdit(i));
+        const delBtn = document.createElement('span'); delBtn.textContent='🗑️';
+        delBtn.onclick=()=>authPrompt(()=>removePlayer(i));
+        actions.appendChild(editBtn); actions.appendChild(delBtn);
+
+        el.appendChild(avatar); el.appendChild(meta); el.appendChild(rank); el.appendChild(actions);
+        playersWrap.appendChild(el);
+      });
+    }
+
+    function authPrompt(callback){
+      const pw = prompt("Enter password:");
+      if (pw === PASSWORD) callback();
+      else alert("Wrong password!");
+    }
+
+    function startEdit(index){
+      const list = loadPlayers();
+      const p = list[index];
+      editingIndex = index;
+      modal.style.display='flex';
+      authBlock.style.display='none';
+      playerForm.style.display='block';
+      modalTitle.textContent="Edit Player";
+      nameInput.value = p.name;
+      rankInput.value = p.rank;
+      tierSelect.value = p.tier;
+      descInput.value = p.desc || '';
+      skinInput.value = p.skin;
+    }
+
+    function removePlayer(index){
+      const list = loadPlayers();
+      list.splice(index,1);
+      savePlayers(list);
+      renderPlayers();
+    }
+
+    checkBtn.addEventListener('click', ()=>{
+      const val = pwInput.value.trim();
+      if (!val){ authError.textContent='Please enter the password.'; authError.style.display='block'; return; }
+      if (val !== PASSWORD){ authError.textContent='Wrong password.'; authError.style.display='block'; return; }
+      authError.style.display='none';
+      authBlock.style.display='none';
+      playerForm.style.display='block';
+      nameInput.focus();
+    });
+
+    playerForm.addEventListener('submit', (e)=>{
+      e.preventDefault(); formError.style.display='none';
+      const name = nameInput.value.trim();
+      const rank = rankInput.value.trim();
+      const tier = tierSelect.value.trim();
+      const skin = skinInput.value.trim();
+      const desc = descInput.value.trim();
+      if (!name) { formError.textContent='Name is required.'; formError.style.display='block'; return; }
+      if (!rank) { formError.textContent='Rank is required.'; formError.style.display='block'; return; }
+
+      const list = loadPlayers();
+      if (editingIndex===null && list.find(p=>String(p.rank) === String(rank))){ 
+        formError.textContent = 'This rank is already used.'; formError.style.display='block'; return; 
+      }
+      if (editingIndex!==null){
+        list[editingIndex] = { name, rank: String(rank), tier, desc, skin, addedAt:list[editingIndex].addedAt };
+      } else {
+        const newPlayer = { name, rank: String(rank), tier: tier||'', desc: desc||'', skin: skin||'', addedAt: new Date().toISOString() };
+        list.push(newPlayer);
+      }
+      savePlayers(list);
+      renderPlayers();
+      closeModal();
+    });
+
+    modal.addEventListener('click', (ev)=>{ if (ev.target === modal) closeModal(); });
+
+    renderPlayers();
+  </script>
+</body>
+</html>
